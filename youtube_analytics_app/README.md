@@ -4,17 +4,31 @@ A premium, local-first web application designed to run on a **Raspberry Pi 4 (8G
 
 ---
 
+## Core Features & Analytical Insights
+
+- **Multi-Archive Merging Ingestion:** Seamlessly upload multiple split Google Takeout `.zip` archives at once. The backend extracts, merges, deduplicates (using title, channel, and timestamps), and sorts the records chronologically.
+- **Robust Client-Side User Tracking:** Utilizes persistent browser `localStorage` user tokens to bypass browser sandbox cookie blocks (common when self-hosting web apps on raw Raspberry Pi local IP addresses).
+- **100% Offline Compatibility:** The dashboard is built with offline-first environments in mind. If the Raspberry Pi lacks internet access, the frontend detects missing external dependencies (like Chart.js) and falls back to clean, non-blocking placeholder messages without crashing JavaScript execution.
+- **Key Metrics & Temporal Habits:** Parses total videos watched, estimated watch hours (20-minute active session aggregation), unique creators, average daily watch volume, and late-night binge ratios (11 PM - 4 AM).
+- **Longest Binge Sitting Record:** Tracks your single longest uninterrupted watching streak, displaying duration, date, count, and the dominant channel watched.
+- **Nostalgia Channels:** Highlights forgotten favorites—creators you watched heavily in the past (5+ views) but haven't watched once in the last 6 months.
+- **Ghost Subscriptions Audit:** Compares your `subscriptions.csv` with your actual watch history to identify channels you are subscribed to but have never actually watched.
+- **Algorithmic Recommendation Audits:** Calculates comfort autoplay loop frequencies (same-channel plays) and Channel Concentration indices (blended HHI score).
+- **Search Focus Index:** Correlates search queries starting educational/technical learning paths with subsequent 30-minute content categories watched to score focus vs. distraction.
+
+---
+
 ## Key Privacy Features
 - **100% Offline Processing:** All data is parsed, stored, and analyzed locally on the device.
 - **Zero Cloud Leakages:** No metrics, watch histories, or search intents are transmitted out of your local network.
-- **Session-Based Isolation:** Each user session stores its data in an isolated directory under `data/users/<session_id>/` for simple cleanups and debugging.
+- **Local User Storage Isolation:** Each user's uploads, parsed CSVs, and computed summaries are stored inside a dedicated directory under `data/users/<user_id>/` for simple auditing and manual purging.
 
 ---
 
 ## Tech Stack
-- **Backend:** Flask, Pandas, NumPy, Scikit-learn (NLP rule-based intent parsing)
-- **Frontend:** Vanilla CSS (Glassmorphism dark theme), HTML5, JavaScript (AJAX upload with progress tracking)
-- **Charts:** Chart.js (client-side rendering for optimal Raspberry Pi resource allocation)
+- **Backend:** Flask, Pandas, NumPy
+- **Frontend:** Vanilla CSS (Glassmorphism dark theme), HTML5, JavaScript (AJAX upload with progress tracking & checklist animations)
+- **Charts:** Chart.js (client-side rendering for optimal Raspberry Pi resource allocation, with offline canvas fallbacks)
 
 ---
 
