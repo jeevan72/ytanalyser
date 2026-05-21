@@ -64,9 +64,9 @@
                         We will locate and parse <code>watch-history.html</code>, <code>search-history.html</code>, and <code>subscriptions.csv</code>.
                     </p>
                     <div id="dropzone" class="dropzone-area">
-                        <input type="file" id="zip-file-input" accept=".zip" hidden>
+                        <input type="file" id="zip-file-input" accept=".zip" multiple hidden>
                         <i class="fa-solid fa-file-zipper zip-icon"></i>
-                        <p class="dropzone-text">Drag Takeout ZIP here or <span class="browse-link">click to browse</span></p>
+                        <p class="dropzone-text">Drag Takeout ZIP file(s) here or <span class="browse-link">click to browse</span></p>
                     </div>
                     
                     <div id="upload-progress-container" class="progress-container hidden">
@@ -89,6 +89,40 @@
                 </div>
             </section>
 
+            <!-- Processing / Loading View -->
+            <section id="processing-section" class="content-section hidden">
+                <div class="glass-card processing-card text-center">
+                    <div class="processing-spinner-wrapper">
+                        <div class="premium-spinner"></div>
+                    </div>
+                    <h2>Processing your Takeout Archive(s)</h2>
+                    <p class="processing-subtitle">This runs 100% locally. Parsing, categorizing, and calculating behavioral metrics...</p>
+                    
+                    <div class="processing-steps">
+                        <div class="step-item" id="step-upload">
+                            <i class="fa-solid fa-spinner fa-spin step-icon"></i>
+                            <span>Uploading archive files...</span>
+                        </div>
+                        <div class="step-item pending" id="step-extract">
+                            <i class="fa-solid fa-circle-notch step-icon"></i>
+                            <span>Extracting zip content...</span>
+                        </div>
+                        <div class="step-item pending" id="step-parse">
+                            <i class="fa-solid fa-circle-notch step-icon"></i>
+                            <span>Parsing YouTube watch & search histories...</span>
+                        </div>
+                        <div class="step-item pending" id="step-nlp">
+                            <i class="fa-solid fa-circle-notch step-icon"></i>
+                            <span>Running NLP search intent classifier...</span>
+                        </div>
+                        <div class="step-item pending" id="step-compile">
+                            <i class="fa-solid fa-circle-notch step-icon"></i>
+                            <span>Compiling behavioral & loop statistics...</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- Dashboard Analytics View (Displayed if data is loaded) -->
             <section id="dashboard-section" class="content-section {{ '' if has_data else 'hidden' }}">
                 <div class="action-bar">
@@ -106,6 +140,14 @@
                             </div>
                             <h2 class="metric-value" id="stat-total-watched">0</h2>
                             <p class="metric-desc">Lifetime video counts parsed</p>
+                        </div>
+                        <div class="metric-card glass-card">
+                            <div class="metric-header">
+                                <span class="metric-title">Estimated Watch Time</span>
+                                <i class="fa-solid fa-hourglass-half metric-icon red-icon"></i>
+                            </div>
+                            <h2 class="metric-value" id="stat-total-hours">0 hrs</h2>
+                            <p class="metric-desc" id="stat-hours-desc">Approximate hours watched</p>
                         </div>
                         <div class="metric-card glass-card">
                             <div class="metric-header">
@@ -147,6 +189,14 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="glass-card yoy-trends-card" style="margin-top: 2rem;">
+                        <h3>Year-over-Year (YoY) Activity Trend</h3>
+                        <p class="chart-subtitle">Comparative watch history counts broken down by calendar years</p>
+                        <div class="yoy-chart-container" style="height: 200px; position: relative;">
+                            <canvas id="chart-yoy"></canvas>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- habits & temporal behaviors -->
@@ -179,6 +229,13 @@
                                 </div>
                                 <div class="diagnostic-item">
                                     <div class="diagnostic-title">
+                                        <span>Late Night Binging Index</span>
+                                        <span id="stat-late-night" class="badge badge-warning">0%</span>
+                                    </div>
+                                    <p class="diagnostic-desc">Percentage of watch history occurring between 11 PM and 4 AM</p>
+                                </div>
+                                <div class="diagnostic-item">
+                                    <div class="diagnostic-title">
                                         <span>Subscription Utility Overlap</span>
                                         <span id="stat-subs-overlap" class="badge badge-primary">0%</span>
                                     </div>
@@ -191,6 +248,47 @@
                                     </div>
                                     <p class="diagnostic-desc">% of total views directed to subscribed channels</p>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid-2col" style="margin-top: 2rem;">
+                        <div class="glass-card binge-record-card">
+                            <div class="card-icon-header" style="display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1.5rem;">
+                                <i class="fa-solid fa-fire fire-icon" style="font-size: 1.5rem; color: var(--accent-orange);"></i>
+                                <h3 style="margin-bottom: 0;">Your Longest Binge Sitting Record</h3>
+                            </div>
+                            <div class="binge-record-content" style="display: flex; flex-direction: column; gap: 0.8rem;">
+                                <div class="binge-stat-row" style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem;">
+                                    <span class="binge-stat-label" style="color: var(--text-secondary); font-size: 0.9rem;">Videos Watched:</span>
+                                    <span class="binge-stat-value" id="binge-record-videos" style="font-weight: 600; color: var(--text-primary);">0</span>
+                                </div>
+                                <div class="binge-stat-row" style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem;">
+                                    <span class="binge-stat-label" style="color: var(--text-secondary); font-size: 0.9rem;">Session Duration:</span>
+                                    <span class="binge-stat-value" id="binge-record-duration" style="font-weight: 600; color: var(--text-primary);">0 mins</span>
+                                </div>
+                                <div class="binge-stat-row" style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem;">
+                                    <span class="binge-stat-label" style="color: var(--text-secondary); font-size: 0.9rem;">Sitting Date:</span>
+                                    <span class="binge-stat-value" id="binge-record-date" style="font-weight: 600; color: var(--text-primary);">N/A</span>
+                                </div>
+                                <div class="binge-stat-row" style="display: flex; justify-content: space-between; padding-bottom: 0.2rem;">
+                                    <span class="binge-stat-label" style="color: var(--text-secondary); font-size: 0.9rem;">Primary Channel:</span>
+                                    <span class="binge-stat-value" style="font-weight: 600;">
+                                        <a href="#" id="binge-record-channel-link" target="_blank" class="premium-link" style="color: var(--accent-orange); text-decoration: underline;">Unknown</a>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="glass-card nostalgia-card">
+                            <div class="card-icon-header" style="display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.5rem;">
+                                <i class="fa-solid fa-clock-rotate-left nostalgia-icon" style="font-size: 1.5rem; color: var(--accent-purple);"></i>
+                                <h3 style="margin-bottom: 0;">Nostalgia Channels (Forgotten Favorites)</h3>
+                            </div>
+                            <p class="chart-subtitle">Creators you watched heavily in the past but haven't watched once in the last 6 months</p>
+                            <div class="nostalgia-list-wrapper" style="max-height: 180px; overflow-y: auto;">
+                                <ul class="nostalgia-list" id="nostalgia-container" style="list-style: none; display: flex; flex-direction: column; gap: 0.6rem; padding: 0.2rem;">
+                                    <!-- Dynamic items from JS -->
+                                </ul>
                             </div>
                         </div>
                     </div>
@@ -255,6 +353,7 @@
                                         <th>Total Views</th>
                                         <th>Loop Counts</th>
                                         <th>Blended Comfort Score</th>
+                                        <th>Subscription Audit</th>
                                     </tr>
                                 </thead>
                                 <tbody id="comfort-channels-table-body">
@@ -263,11 +362,53 @@
                             </table>
                         </div>
                     </div>
+
+                    <div class="grid-2col" style="margin-top: 2.5rem;">
+                        <div class="glass-card">
+                            <h3>Top 5 Repeat-Watched Videos</h3>
+                            <p class="chart-subtitle">Your most replayed individual videos, linked with subscription status</p>
+                            <div class="repeat-videos-list" id="repeat-videos-container" style="display: flex; flex-direction: column; gap: 1rem;">
+                                <!-- Dynamic rows from JS -->
+                            </div>
+                        </div>
+                        <div class="glass-card">
+                            <h3>Ghost Subscriptions (Inactive Channels)</h3>
+                            <p class="chart-subtitle">Channels you subscribe to but have never watched (<span id="ghost-subs-count">0</span> channels found)</p>
+                            <div class="ghost-subs-list-wrapper" style="max-height: 240px; overflow-y: auto;">
+                                <ul class="ghost-subs-list" id="ghost-subs-container" style="list-style: none; display: flex; flex-direction: column; gap: 0.6rem; padding: 0.2rem;">
+                                    <!-- Dynamic items from JS -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Search & NLP -->
                 <div id="search-nlp" class="anchor-section">
                     <h3 class="section-title">🔍 Search Patterns & NLP Classifier</h3>
+                    
+                    <div class="metrics-grid" style="margin-bottom: 2.5rem;">
+                        <div class="metric-card glass-card">
+                            <div class="metric-header">
+                                <span class="metric-title">Total Search Queries</span>
+                                <i class="fa-solid fa-magnifying-glass metric-icon orange-icon"></i>
+                            </div>
+                            <h2 class="metric-value" id="stat-total-searches">0</h2>
+                            <p class="metric-desc">Lifetime search history queries</p>
+                        </div>
+                        <div class="metric-card glass-card">
+                            <div class="metric-header">
+                                <span class="metric-title">Search Focus Index</span>
+                                <i class="fa-solid fa-bullseye metric-icon green-icon"></i>
+                            </div>
+                            <div style="display: flex; align-items: baseline; gap: 1rem; margin-bottom: 0.4rem;">
+                                <h2 class="metric-value" id="stat-focus-score" style="margin-bottom: 0;">0%</h2>
+                                <span class="badge" id="stat-focus-rating" style="padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">High Focus</span>
+                            </div>
+                            <p class="metric-desc">Query alignment with subsequent watch categories</p>
+                        </div>
+                    </div>
+
                     <div class="grid-2col">
                         <div class="glass-card chart-card">
                             <h3>Search Query Intent Classification</h3>

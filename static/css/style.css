@@ -503,6 +503,7 @@ body {
 .blue-icon { color: var(--accent-blue); background-color: var(--accent-blue-glow); border: 1px solid hsla(210, 90%, 60%, 0.15); }
 .green-icon { color: var(--accent-green); background-color: var(--accent-green-glow); border: 1px solid hsla(150, 75%, 50%, 0.15); }
 .orange-icon { color: var(--accent-orange); background-color: var(--accent-orange-glow); border: 1px solid hsla(30, 90%, 55%, 0.15); }
+.red-icon { color: var(--accent-red); background-color: var(--accent-red-glow); border: 1px solid hsla(355, 80%, 55%, 0.15); }
 
 .metric-value {
     font-family: var(--font-heading);
@@ -800,6 +801,262 @@ body {
     font-size: 0.88rem;
     line-height: 1.6;
     color: var(--text-secondary);
+}
+
+/* ==========================================================================
+   Advanced Processing View Styling
+   ========================================================================== */
+.processing-card {
+    max-width: 680px;
+    margin: 4rem auto;
+    padding: 3.5rem 3rem;
+}
+
+.processing-spinner-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2rem;
+}
+
+.premium-spinner {
+    width: 70px;
+    height: 70px;
+    border: 3px solid hsla(270, 85%, 65%, 0.1);
+    border-radius: 50%;
+    border-top-color: var(--accent-purple);
+    border-right-color: var(--accent-blue);
+    animation: spin 1.2s cubic-bezier(0.5, 0.1, 0.4, 0.9) infinite;
+    box-shadow: 0 0 20px var(--accent-purple-glow);
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.processing-subtitle {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    margin-bottom: 2.5rem;
+}
+
+.processing-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    max-width: 480px;
+    margin: 0 auto;
+    text-align: left;
+}
+
+.step-item {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    font-size: 1rem;
+    color: var(--text-primary);
+    padding: 0.8rem 1.2rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-glass);
+    background-color: rgba(0, 0, 0, 0.15);
+    transition: all var(--transition-speed);
+}
+
+.step-item.pending {
+    color: var(--text-muted);
+    border-color: transparent;
+    background-color: transparent;
+}
+
+.step-item.completed {
+    color: var(--accent-green);
+    border-color: var(--accent-green-glow);
+    background-color: hsla(150, 75%, 50%, 0.03);
+}
+
+.step-item.completed .step-icon {
+    color: var(--accent-green);
+}
+
+.step-item.pending .step-icon {
+    color: var(--text-muted);
+}
+
+.step-icon {
+    font-size: 1.15rem;
+    color: var(--accent-purple);
+    width: 24px;
+    text-align: center;
+}
+
+/* ==========================================================================
+   Subscription Audit Badges
+   ========================================================================== */
+.badge-subbed {
+    background-color: var(--accent-green-glow);
+    color: var(--accent-green);
+    border: 1px solid hsla(150, 75%, 50%, 0.2);
+}
+
+.badge-unsubbed {
+    background-color: hsla(0, 0%, 50%, 0.08);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-glass);
+}
+
+/* ==========================================================================
+   Top Repeat Videos List
+   ========================================================================== */
+.repeat-video-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.2rem;
+    border-radius: 14px;
+    border: 1px solid var(--border-glass);
+    background-color: rgba(0, 0, 0, 0.12);
+    transition: all var(--transition-speed);
+}
+
+.repeat-video-item:hover {
+    background-color: var(--bg-card-hover);
+    border-color: var(--border-glass-focused);
+    transform: translateX(4px);
+}
+
+.repeat-video-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    max-width: 75%;
+}
+
+.repeat-video-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-decoration: none;
+    line-height: 1.4;
+}
+
+.repeat-video-title:hover {
+    color: var(--accent-purple);
+}
+
+.repeat-video-channel {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.premium-link {
+    text-decoration: none;
+    transition: color var(--transition-speed);
+}
+
+.premium-link:hover {
+    color: var(--accent-purple) !important;
+}
+
+.repeat-video-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.4rem;
+}
+
+.repeat-watch-count {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--accent-purple);
+}
+
+.repeat-watch-label {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+/* ==========================================================================
+   Ghost Subscriptions List
+   ========================================================================== */
+.ghost-subs-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.ghost-sub-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem 1.2rem;
+    border-radius: 12px;
+    background-color: rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-glass);
+}
+
+.ghost-sub-item:hover {
+    background-color: var(--bg-card-hover);
+}
+
+.ghost-sub-channel-link {
+    color: var(--text-primary);
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.ghost-sub-channel-link:hover {
+    color: var(--accent-purple);
+}
+
+.ghost-badge {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-glass);
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+}
+
+/* ==========================================================================
+   Nostalgia Forgotten Favorites List
+   ========================================================================== */
+.nostalgia-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem 1.2rem;
+    border-radius: 12px;
+    background-color: rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-glass);
+    transition: all var(--transition-speed);
+}
+
+.nostalgia-item:hover {
+    background-color: var(--bg-card-hover);
+    transform: translateX(4px);
+}
+
+.nostalgia-channel-link {
+    color: var(--text-primary);
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.nostalgia-channel-link:hover {
+    color: var(--accent-purple);
+}
+
+.nostalgia-meta {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
 }
 
 /* Helper utilities */

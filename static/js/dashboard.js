@@ -16,6 +16,7 @@ function escapeHtml(str) {
 document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
     const uploadSection = document.getElementById('upload-section');
+    const processingSection = document.getElementById('processing-section');
     const dashboardSection = document.getElementById('dashboard-section');
     const dropzone = document.getElementById('dropzone');
     const fileInput = document.getElementById('zip-file-input');
@@ -124,29 +125,57 @@ document.addEventListener('DOMContentLoaded', () => {
     // Validate and upload files
     function handleFiles(files) {
         if (files.length === 0) return;
-        const file = files[0];
         
-        // Check extension (.zip only)
-        if (!file.name.endsWith('.zip')) {
-            alert('Error: Please upload a valid Google Takeout .zip archive.');
-            return;
+        const zipFiles = [];
+        for (let i = 0; i < files.length; i++) {
+            if (!files[i].name.endsWith('.zip')) {
+                alert(`Error: File "${files[i].name}" is not a valid Google Takeout .zip archive.`);
+                return;
+            }
+            zipFiles.push(files[i]);
         }
 
-        uploadFile(file);
+        uploadFiles(zipFiles);
+    }
+
+    // Processing Checklist Step State Management
+    function setStepState(stepId, state) {
+        const el = document.getElementById(stepId);
+        if (!el) return;
+        
+        const icon = el.querySelector('.step-icon');
+        
+        if (state === 'pending') {
+            el.className = 'step-item pending';
+            if (icon) icon.className = 'fa-solid fa-circle-notch step-icon';
+        } else if (state === 'active') {
+            el.className = 'step-item';
+            if (icon) icon.className = 'fa-solid fa-spinner fa-spin step-icon';
+        } else if (state === 'completed') {
+            el.className = 'step-item completed';
+            if (icon) icon.className = 'fa-solid fa-circle-check step-icon';
+        }
     }
 
     // -------------------------------------------------------------
-    // AJAX Upload with Progress Reporting
+    // AJAX Upload with Progress Reporting & Checklist Transitions
     // -------------------------------------------------------------
-    function uploadFile(file) {
+    function uploadFiles(files) {
         const formData = new FormData();
-        formData.append('file', file);
+        files.forEach(file => {
+            formData.append('file', file);
+        });
 
-        // Reset progress bar
-        progressContainer.classList.remove('hidden');
-        progressBar.style.width = '0%';
-        progressPercentage.innerText = '0%';
-        progressText.innerText = 'Uploading your archive...';
+        // Hide upload view and show processing steps
+        uploadSection.classList.add('hidden');
+        processingSection.classList.remove('hidden');
+
+        // Reset checklist steps states
+        setStepState('step-upload', 'active');
+        setStepState('step-extract', 'pending');
+        setStepState('step-parse', 'pending');
+        setStepState('step-nlp', 'pending');
+        setStepState('step-compile', 'pending');
 
         const xhr = new XMLHttpRequest();
         
@@ -154,11 +183,9 @@ document.addEventListener('DOMContentLoaded', () => {
         xhr.upload.addEventListener('progress', (e) => {
             if (e.lengthComputable) {
                 const percentComplete = Math.round((e.loaded / e.total) * 100);
-                progressBar.style.width = percentComplete + '%';
-                progressPercentage.innerText = percentComplete + '%';
-                
-                if (percentComplete === 100) {
-                    progressText.innerText = 'Extracting and parsing history files (this might take a moment)...';
+                const uploadText = document.getElementById('step-upload').querySelector('span');
+                if (uploadText) {
+                    uploadText.innerText = `Uploading archive files (${percentComplete}%)...`;
                 }
             }
         });
@@ -166,22 +193,42 @@ document.addEventListener('DOMContentLoaded', () => {
         // Request finished
         xhr.addEventListener('load', () => {
             if (xhr.status >= 200 && xhr.status < 300) {
-                const response = JSON.parse(xhr.responseText);
-                progressText.innerText = 'Analysis complete!';
-                progressBar.style.width = '100%';
-                progressPercentage.innerText = '100%';
+                // Upload step done
+                setStepState('step-upload', 'completed');
+                const uploadText = document.getElementById('step-upload').querySelector('span');
+                if (uploadText) uploadText.innerText = 'Uploading archive files...';
                 
-                // Show success behavior, load dashboard
+                // Animate through extract -> parse -> nlp -> compile sequentially
+                setStepState('step-extract', 'active');
+                
                 setTimeout(() => {
-                    progressContainer.classList.add('hidden');
-                    uploadSection.classList.add('hidden');
+                    setStepState('step-extract', 'completed');
+                    setStepState('step-parse', 'active');
+                }, 800);
+                
+                setTimeout(() => {
+                    setStepState('step-parse', 'completed');
+                    setStepState('step-nlp', 'active');
+                }, 1600);
+                
+                setTimeout(() => {
+                    setStepState('step-nlp', 'completed');
+                    setStepState('step-compile', 'active');
+                }, 2400);
+                
+                setTimeout(() => {
+                    setStepState('step-compile', 'completed');
+                }, 3200);
+                
+                setTimeout(() => {
+                    processingSection.classList.add('hidden');
                     dashboardSection.classList.remove('hidden');
                     
                     statusTag.className = 'status-indicator ready';
                     statusText.innerText = 'Data Loaded';
                     
                     loadDashboardData();
-                }, 800);
+                }, 4000);
             } else {
                 let errorMsg = 'An error occurred during upload.';
                 try {
@@ -190,13 +237,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 } catch(e) {}
                 
                 alert('Upload failed: ' + errorMsg);
-                progressContainer.classList.add('hidden');
+                processingSection.classList.add('hidden');
+                uploadSection.classList.remove('hidden');
             }
         });
 
         xhr.addEventListener('error', () => {
             alert('Upload failed: Network error.');
-            progressContainer.classList.add('hidden');
+            processingSection.classList.add('hidden');
+            uploadSection.classList.remove('hidden');
         });
 
         xhr.open('POST', '/upload', true);
@@ -210,9 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
         reuploadBtn.addEventListener('click', () => {
             uploadSection.classList.remove('hidden');
             dashboardSection.classList.add('hidden');
-            progressContainer.classList.add('hidden');
-            progressBar.style.width = '0%';
-            progressPercentage.innerText = '0%';
+            processingSection.classList.add('hidden');
             fileInput.value = ''; // Clear file input selection
             
             statusTag.className = 'status-indicator pending';
@@ -235,6 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderCategoryChart(data.category_counts);
                 renderSearchIntentChart(data.search_intents);
                 renderComfortTable(data.top_channels);
+                renderYoYChart(data.yoy_trend);
             })
             .catch(err => {
                 console.error('Error fetching statistics:', err);
@@ -272,6 +320,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('stat-avg-daily').innerText = parseFloat(data.avg_views_per_day).toFixed(1);
         document.getElementById('stat-binge-sessions').innerText = parseInt(data.binge_sessions).toLocaleString();
         
+        // Estimated Hours and Date Range
+        document.getElementById('stat-total-hours').innerText = parseFloat(data.estimated_hours || 0).toFixed(1) + ' hrs';
+        document.getElementById('stat-hours-desc').innerText = `From ${data.watch_start_date || 'N/A'} to ${data.watch_end_date || 'N/A'}`;
+        
         // Loop count percentage
         document.getElementById('stat-loop-pct').innerText = parseFloat(data.loop_percentage).toFixed(1) + '%';
         
@@ -287,6 +339,129 @@ document.addEventListener('DOMContentLoaded', () => {
         
         document.getElementById('stat-subs-overlap').innerText = parseFloat(data.subs_overlap_pct || 0).toFixed(1) + '%';
         document.getElementById('stat-subs-watched').innerText = parseFloat(data.subs_watched_pct || 0).toFixed(1) + '%';
+
+        // Late Night Binging Index
+        const lateNightEl = document.getElementById('stat-late-night');
+        const lateNightPct = parseFloat(data.late_night_pct || 0);
+        lateNightEl.innerText = lateNightPct.toFixed(1) + '%';
+        if (lateNightPct > 35) {
+            lateNightEl.className = 'badge badge-danger';
+        } else if (lateNightPct > 20) {
+            lateNightEl.className = 'badge badge-warning';
+        } else {
+            lateNightEl.className = 'badge badge-success';
+        }
+
+        // Focus vs. Distraction Index
+        const focusScoreEl = document.getElementById('stat-focus-score');
+        const focusRatingEl = document.getElementById('stat-focus-rating');
+        const focusScore = parseFloat(data.focus_score || 0);
+        focusScoreEl.innerText = focusScore.toFixed(1) + '%';
+        if (focusScore >= 70) {
+            focusRatingEl.innerText = 'High Focus';
+            focusRatingEl.className = 'badge badge-success';
+            focusRatingEl.style.backgroundColor = colors.greenGlow;
+            focusRatingEl.style.color = colors.green;
+            focusRatingEl.style.border = `1px solid hsla(150, 75%, 50%, 0.2)`;
+        } else if (focusScore >= 40) {
+            focusRatingEl.innerText = 'Moderate Focus';
+            focusRatingEl.className = 'badge badge-warning';
+            focusRatingEl.style.backgroundColor = colors.orangeGlow;
+            focusRatingEl.style.color = colors.orange;
+            focusRatingEl.style.border = `1px solid hsla(30, 90%, 55%, 0.2)`;
+        } else {
+            focusRatingEl.innerText = 'Distracted';
+            focusRatingEl.className = 'badge badge-danger';
+            focusRatingEl.style.backgroundColor = colors.redGlow;
+            focusRatingEl.style.color = colors.red;
+            focusRatingEl.style.border = `1px solid hsla(355, 80%, 55%, 0.2)`;
+        }
+
+        // Longest Binge Sitting Record
+        const binge = data.longest_binge || {};
+        document.getElementById('binge-record-videos').innerText = parseInt(binge.video_count || 0).toLocaleString();
+        document.getElementById('binge-record-duration').innerText = `${parseInt(binge.duration_mins || 0)} mins`;
+        document.getElementById('binge-record-date').innerText = binge.date || 'N/A';
+        
+        const bingeLink = document.getElementById('binge-record-channel-link');
+        bingeLink.innerText = binge.primary_channel || 'Unknown';
+        bingeLink.href = binge.primary_channel_url || '#';
+
+        // Nostalgia Channels
+        populateNostalgia(data.nostalgia_channels);
+        
+        // Repeat Videos
+        populateRepeatVideos(data.top_videos);
+        
+        // Ghost Subscriptions
+        populateGhostSubscriptions(data.ghost_subscriptions, data.ghost_count);
+    }
+
+    function populateNostalgia(channels) {
+        const container = document.getElementById('nostalgia-container');
+        container.innerHTML = '';
+        if (!channels || channels.length === 0) {
+            container.innerHTML = `<li class="text-center" style="color: var(--text-muted); font-size: 0.85rem; padding: 1rem 0;">No nostalgia channels found</li>`;
+            return;
+        }
+        
+        channels.forEach(ch => {
+            const li = document.createElement('li');
+            li.className = 'nostalgia-item';
+            li.innerHTML = `
+                <a href="${escapeHtml(ch.channel_url)}" target="_blank" class="nostalgia-channel-link">${escapeHtml(ch.channel)} <i class="fa-solid fa-external-link" style="font-size: 0.7rem; margin-left: 3px; color: var(--text-muted);"></i></a>
+                <span class="nostalgia-meta"><i class="fa-solid fa-clock-rotate-left"></i> ${ch.past_views} past views</span>
+            `;
+            container.appendChild(li);
+        });
+    }
+
+    function populateRepeatVideos(videos) {
+        const container = document.getElementById('repeat-videos-container');
+        container.innerHTML = '';
+        if (!videos || videos.length === 0) {
+            container.innerHTML = `<div class="text-center" style="color: var(--text-muted); font-size: 0.85rem; padding: 1.5rem 0;">No repeat video data available</div>`;
+            return;
+        }
+        
+        videos.forEach(vid => {
+            const div = document.createElement('div');
+            div.className = 'repeat-video-item';
+            div.innerHTML = `
+                <div class="repeat-video-main">
+                    <a href="${escapeHtml(vid.url)}" target="_blank" class="repeat-video-title">${escapeHtml(vid.title)} <i class="fa-solid fa-external-link" style="font-size: 0.75rem; margin-left: 4px; color: var(--text-muted);"></i></a>
+                    <div class="repeat-video-channel">
+                        <span>by <a href="${escapeHtml(vid.channel_url)}" target="_blank" class="premium-link" style="color: var(--text-secondary); text-decoration: underline;">${escapeHtml(vid.channel)}</a></span>
+                        <span class="badge ${vid.is_subscribed ? 'badge-subbed' : 'badge-unsubbed'}">${vid.is_subscribed ? '<i class="fa-solid fa-bell"></i> Subscribed' : '<i class="fa-solid fa-bell-slash"></i> Not Subscribed'}</span>
+                    </div>
+                </div>
+                <div class="repeat-video-meta">
+                    <span class="repeat-watch-count">${vid.watch_count}</span>
+                    <span class="repeat-watch-label">plays</span>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function populateGhostSubscriptions(subs, count) {
+        document.getElementById('ghost-subs-count').innerText = count;
+        const container = document.getElementById('ghost-subs-container');
+        container.innerHTML = '';
+        if (!subs || subs.length === 0) {
+            container.innerHTML = `<li class="text-center" style="color: var(--text-muted); font-size: 0.85rem; padding: 1.5rem 0;">No ghost subscriptions found! Active viewer!</li>`;
+            return;
+        }
+        
+        subs.forEach(sub => {
+            const li = document.createElement('li');
+            li.className = 'ghost-sub-item';
+            li.innerHTML = `
+                <a href="${escapeHtml(sub.channel_url)}" target="_blank" class="ghost-sub-channel-link">${escapeHtml(sub.channel)} <i class="fa-solid fa-external-link" style="font-size: 0.7rem; margin-left: 3px; color: var(--text-muted);"></i></a>
+                <span class="ghost-badge"><i class="fa-solid fa-eye-slash"></i> 0 views</span>
+            `;
+            container.appendChild(li);
+        });
     }
 
     function updateHhiLabel(hhiValues) {
@@ -332,7 +507,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tbody.innerHTML = '';
         
         if (!channels || channels.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center">No comfort channel data available</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center">No comfort channel data available</td></tr>`;
             return;
         }
 
@@ -340,10 +515,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td class="comfort-rank">#${idx + 1}</td>
-                <td style="font-weight: 500; color: var(--text-primary);">${escapeHtml(ch.channel)}</td>
+                <td style="font-weight: 500;">
+                    <a href="${escapeHtml(ch.channel_url)}" target="_blank" class="premium-link" style="color: var(--text-primary); text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                        ${escapeHtml(ch.channel)}
+                        <i class="fa-solid fa-external-link" style="font-size: 0.7rem; color: var(--text-muted);"></i>
+                    </a>
+                </td>
                 <td>${parseInt(ch.views).toLocaleString()}</td>
                 <td>${parseInt(ch.loops).toLocaleString()}</td>
                 <td><span class="comfort-score-badge">${parseFloat(ch.comfort_score).toFixed(1)}</span></td>
+                <td>
+                    <span class="badge ${ch.is_subscribed ? 'badge-subbed' : 'badge-unsubbed'}">
+                        ${ch.is_subscribed ? '<i class="fa-solid fa-bell" style="margin-right: 4px;"></i> Subscribed' : '<i class="fa-solid fa-bell-slash" style="margin-right: 4px;"></i> Not Subscribed'}
+                    </span>
+                </td>
             `;
             tbody.appendChild(row);
         });
@@ -419,7 +604,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (charts[id]) {
             charts[id].destroy();
         }
-        const ctx = document.getElementById(id).getContext('2d');
+        const canvas = document.getElementById(id);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
         charts[id] = new Chart(ctx, config);
     }
 
@@ -598,7 +785,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         data: [1],
                         backgroundColor: ['rgba(255,255,255,0.05)'],
                         borderWidth: 0
-                    }]
+                     }]
                 },
                 options: {
                     responsive: true,
@@ -655,13 +842,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!searchWords || !searchWords.labels || searchWords.labels.length === 0) {
             // Draw empty state on canvas
             const canvas = document.getElementById('chart-search-words');
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.font = '14px Inter, sans-serif';
-            ctx.fillStyle = 'hsl(210, 10%, 50%)';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('No search history word clouds available', canvas.width / 2, canvas.height / 2);
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.font = '14px Inter, sans-serif';
+                ctx.fillStyle = 'hsl(210, 10%, 50%)';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('No search history word clouds available', canvas.width / 2, canvas.height / 2);
+            }
             return;
         }
 
@@ -693,6 +882,58 @@ document.addEventListener('DOMContentLoaded', () => {
                     },
                     y: {
                         grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    // 7. YoY Activity Trends Line Chart
+    function renderYoYChart(yoyTrend) {
+        if (!yoyTrend || Object.keys(yoyTrend).length === 0) {
+            const canvas = document.getElementById('chart-yoy');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.font = '14px Inter, sans-serif';
+                ctx.fillStyle = 'hsl(210, 10%, 50%)';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('No YoY activity trend data available', canvas.width / 2, canvas.height / 2);
+            }
+            return;
+        }
+
+        const years = Object.keys(yoyTrend).sort();
+        const counts = years.map(y => yoyTrend[y]);
+
+        initChart('chart-yoy', {
+            type: 'line',
+            data: {
+                labels: years,
+                datasets: [{
+                    label: 'Videos Watched',
+                    data: counts,
+                    borderColor: colors.purple,
+                    backgroundColor: colors.purpleGlow,
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 2.5,
+                    pointBackgroundColor: colors.purple,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: {
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        beginAtZero: true
                     }
                 }
             }
