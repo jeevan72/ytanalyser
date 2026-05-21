@@ -1,0 +1,30 @@
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Application data & local uploads (CRITICAL FOR PRIVACY)
+data/
+d:/New folder/youtube_analytics_app/data/
+youtube_analytics_app/data/
+extracted/
+
+# IDE files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# OS files
+.DS_Store
+Thumbs.db
