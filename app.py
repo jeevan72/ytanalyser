@@ -444,4 +444,5 @@ def get_chart_data():
 
 if __name__ == '__main__':
     # Hosted locally, open to network access for Raspberry Pi testing
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=6767, debug=True)
+

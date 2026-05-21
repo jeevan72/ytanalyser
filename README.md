@@ -18,50 +18,45 @@ A premium, local-first web application designed to run on a **Raspberry Pi 4 (8G
 
 ---
 
-## Installation on Raspberry Pi
+## Raspberry Pi Installation
 
-### 1. Clone & Setup Directory
-Copy this project folder to your Raspberry Pi user directory (e.g. `/home/pi/youtube_analytics_app`).
+### Method 1: Auto-Installation (Recommended)
+
+To install all dependencies, configure the background service, set up Nginx to serve the app on port **6767**, and automatically clean up the installer:
+
+1. Clone or copy this project folder to your Raspberry Pi user directory (e.g. `/home/pi/youtube_analytics_app`).
+2. Open your terminal, navigate to the folder, make the installer executable, and run it:
 
 ```bash
 cd /home/pi/youtube_analytics_app
+chmod +x install.sh
+./install.sh
 ```
 
-### 2. Create Virtual Environment
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-### 3. Install Dependencies
-```bash
-pip install --upgrade pip
-pip install -r requirements.txt
-# Gunicorn is needed for production hosting
-pip install gunicorn
-```
-
-### 4. Running the Development Server
-```bash
-python app.py
-```
-By default, the server runs on port `5000` and binds to `0.0.0.0` so it can be accessed within your local network (e.g., `http://<pi-ip-address>:5000`).
+*Note: The script requires sudo privileges to install system packages and configure systemd/Nginx. Once successful, `install.sh` will automatically delete itself.*
 
 ---
 
-## Production Deployment (Recommended)
+### Method 2: Manual Installation
 
-To run the application continuously as a background service on startup and handle larger file uploads cleanly, set up Gunicorn, systemd, and Nginx.
+If you prefer to configure the steps manually:
 
-### 1. Set Up systemd Service
-Create a systemd service file to manage the Flask application process.
+#### 1. Setup Virtual Environment & Dependencies
+```bash
+cd /home/pi/youtube_analytics_app
+python3 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+pip install gunicorn
+```
 
+#### 2. Configure systemd Service
+Create a service file:
 ```bash
 sudo nano /etc/systemd/system/youtube_analytics.service
 ```
-
-Paste the following configuration:
-
+Paste this configuration:
 ```ini
 [Unit]
 Description=Gunicorn daemon serving YouTube Behavioral Analytics
@@ -78,34 +73,28 @@ WantedBy=multi-user.target
 ```
 
 Enable and start the service:
-
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl enable youtube_analytics.service
 sudo systemctl start youtube_analytics.service
-sudo systemctl status youtube_analytics.service
 ```
 
-### 2. Install and Configure Nginx as a Reverse Proxy
-Nginx acts as a reverse proxy, managing network traffic, and buffering file uploads.
-
+#### 3. Configure Nginx Reverse Proxy (Port 6767)
+Install Nginx:
 ```bash
-sudo apt update
-sudo apt install nginx -y
+sudo apt update && sudo apt install nginx -y
 ```
 
-Modify the default Nginx configuration:
-
+Modify the Nginx configurations:
 ```bash
-sudo nano /etc/nginx/sites-available/default
+sudo nano /etc/nginx/sites-available/youtube_analytics
 ```
-
-Replace the content of the `server` block with the following, making sure `client_max_body_size` is set to `150M` to support large Google Takeout zip files:
-
+Paste the following, making sure the client upload limit is `150M` and Nginx listens on port `6767`:
 ```nginx
 server {
-    listen 80;
-    server_name youtube-analytics.local;
+    listen 6767 default_server;
+    listen [::]:6767 default_server;
+    server_name _;
 
     # Support uploading large takeout zip archives
     client_max_body_size 150M;
@@ -125,24 +114,29 @@ server {
 }
 ```
 
-Test and reload Nginx:
-
+Enable config and restart Nginx:
 ```bash
-sudo nginx -t
+sudo ln -sf /etc/nginx/sites-available/youtube_analytics /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
 sudo systemctl restart nginx
 ```
 
-Now, the application is accessible on your local network at `http://<raspberry-pi-ip>/` or via `http://youtube-analytics.local/` (if using local DNS / mdns multicast).
+---
+
+## Verification
+Once running, the application is accessible on your local network at:
+`http://<your-raspberry-pi-ip>:6767`
 
 ---
 
 ## Directory Structure
 ```
 youtube_analytics_app/
-├── app.py                # Flask application core, parsing regexes & API endpoints
+├── app.py                # Flask application core, parsing regexes & API endpoints (Port 6767 default)
 ├── requirements.txt      # Dependency listing
 ├── .gitignore            # Data/cache exclusion rules
 ├── README.md             # This document
+├── install.sh            # Auto-installer shell script (deletes itself after execution)
 ├── templates/
 │   └── index.html        # Glassmorphic layout structure
 └── static/
