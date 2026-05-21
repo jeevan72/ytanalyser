@@ -159,12 +159,22 @@ def calculate_hhi(group):
     shares = group.value_counts(normalize=True)
     return (shares ** 2).sum() * 10000
 
+def get_user_id():
+    user_id = request.args.get('user_id')
+    if not user_id:
+        user_id = request.form.get('user_id')
+    if not user_id:
+        if 'user_id' not in session:
+            session['user_id'] = str(uuid.uuid4())
+        user_id = session['user_id']
+    return user_id
+
 def get_user_dir():
-    if 'user_id' not in session:
-        session['user_id'] = str(uuid.uuid4())
-    user_dir = os.path.join(USERS_DIR, session['user_id'])
+    user_id = get_user_id()
+    user_dir = os.path.join(USERS_DIR, user_id)
     os.makedirs(user_dir, exist_ok=True)
     return user_dir
+
 
 def analyze_user_data(user_dir):
     watch_path = os.path.join(user_dir, "watch_history.csv")
@@ -641,6 +651,12 @@ def upload_file():
         return jsonify({'error': f'Failed during data analysis: {str(e)}'}), 500
             
     return jsonify({'error': 'Allowed file types are .zip'}), 400
+
+@app.route('/api/check_data')
+def check_data():
+    user_dir = get_user_dir()
+    summary_path = os.path.join(user_dir, "analysis_summary.json")
+    return jsonify({'has_data': os.path.exists(summary_path)})
 
 @app.route('/api/stats')
 def get_stats():

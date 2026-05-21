@@ -34,15 +34,17 @@ document.addEventListener('DOMContentLoaded', () => {
     let charts = {};
 
     // Base Chart.js styling overrides for glassmorphism dark theme
-    Chart.defaults.color = 'hsl(210, 15%, 70%)'; // --text-secondary
-    Chart.defaults.font.family = "'Inter', sans-serif";
-    Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(15, 23, 42, 0.9)';
-    Chart.defaults.plugins.tooltip.borderColor = 'hsla(230, 25%, 30%, 0.5)';
-    Chart.defaults.plugins.tooltip.borderWidth = 1;
-    Chart.defaults.plugins.tooltip.titleColor = 'hsl(210, 20%, 95%)';
-    Chart.defaults.plugins.tooltip.bodyColor = 'hsl(210, 15%, 70%)';
-    Chart.defaults.plugins.tooltip.padding = 10;
-    Chart.defaults.plugins.tooltip.cornerRadius = 8;
+    if (typeof Chart !== 'undefined') {
+        Chart.defaults.color = 'hsl(210, 15%, 70%)'; // --text-secondary
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(15, 23, 42, 0.9)';
+        Chart.defaults.plugins.tooltip.borderColor = 'hsla(230, 25%, 30%, 0.5)';
+        Chart.defaults.plugins.tooltip.borderWidth = 1;
+        Chart.defaults.plugins.tooltip.titleColor = 'hsl(210, 20%, 95%)';
+        Chart.defaults.plugins.tooltip.bodyColor = 'hsl(210, 15%, 70%)';
+        Chart.defaults.plugins.tooltip.padding = 10;
+        Chart.defaults.plugins.tooltip.cornerRadius = 8;
+    }
 
     // Define colors matching style.css tokens
     const colors = {
@@ -71,11 +73,35 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Check if data is already loaded on page load
-    const isDataLoaded = !dashboardSection.classList.contains('hidden');
-    if (isDataLoaded) {
-        loadDashboardData();
+    // Initialize or retrieve persistent user_id (local-only storage resolution to bypass cookie issues)
+    let userId = localStorage.getItem('yt_analytics_user_id');
+    if (!userId) {
+        userId = 'user_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        localStorage.setItem('yt_analytics_user_id', userId);
     }
+
+    // Verify if there is already parsed data associated with this user ID
+    fetch(`/api/check_data?user_id=${userId}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.has_data) {
+                uploadSection.classList.add('hidden');
+                dashboardSection.classList.remove('hidden');
+                statusTag.className = 'status-indicator ready';
+                statusText.innerText = 'Data Loaded';
+                loadDashboardData();
+            } else {
+                uploadSection.classList.remove('hidden');
+                dashboardSection.classList.add('hidden');
+                statusTag.className = 'status-indicator pending';
+                statusText.innerText = 'No Data Uploaded';
+            }
+        })
+        .catch(err => {
+            console.error('Error checking data status:', err);
+            uploadSection.classList.remove('hidden');
+            dashboardSection.classList.add('hidden');
+        });
 
     // -------------------------------------------------------------
     // Drag & Drop Functionality
@@ -162,6 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // -------------------------------------------------------------
     function uploadFiles(files) {
         const formData = new FormData();
+        formData.append('user_id', userId);
         files.forEach(file => {
             formData.append('file', file);
         });
@@ -272,7 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // -------------------------------------------------------------
     function loadDashboardData() {
         // Fetch core statistics
-        fetch('/api/stats')
+        fetch(`/api/stats?user_id=${userId}`)
             .then(res => {
                 if (!res.ok) throw new Error('No statistics found');
                 return res.json();
@@ -289,7 +316,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
         // Fetch aggregation charts
-        fetch('/api/charts')
+        fetch(`/api/charts?user_id=${userId}`)
             .then(res => {
                 if (!res.ok) throw new Error('No chart data found');
                 return res.json();
@@ -601,6 +628,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // -------------------------------------------------------------
     
     function initChart(id, config) {
+        if (typeof Chart === 'undefined') {
+            const canvas = document.getElementById(id);
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.font = '14px Inter, sans-serif';
+                ctx.fillStyle = 'hsl(210, 10%, 50%)';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('Chart offline (requires Chart.js)', canvas.width / 2, canvas.height / 2);
+            }
+            return;
+        }
         if (charts[id]) {
             charts[id].destroy();
         }
