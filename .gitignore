@@ -7,24 +7,16 @@ __pycache__/
 env/
 venv/
 .venv/
-pip-log.txt
-pip-delete-this-directory.txt
 
-# Application data & local uploads (CRITICAL FOR PRIVACY)
-data/
-d:/New folder/youtube_analytics_app/data/
+# Application user data (CRITICAL FOR PRIVACY)
 youtube_analytics_app/data/
-extracted/
+processed_data/
+takeout_extracted/
+*.zip
 
-# IDE files
+# IDE & OS files
 .vscode/
 .idea/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.swp
-
-# OS files
 .DS_Store
 Thumbs.db
+*.swp
