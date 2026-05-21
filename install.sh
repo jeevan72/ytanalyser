@@ -1,6 +1,6 @@
 #!/bin/bash
 # YouTube Behavioral Analytics Auto-Installer for Raspberry Pi
-# Sets up Gunicorn systemd daemon and Nginx reverse proxy on port 6767
+# Sets up Gunicorn systemd daemon, Nginx reverse proxy on port 6767, and configures Git.
 
 # Exit immediately if a command exits with a non-zero status
 set -e
@@ -17,9 +17,9 @@ echo "Installation Directory: $INSTALL_DIR"
 echo "System User:             $CURRENT_USER"
 
 # 1. Update and install dependencies
-echo "Installing system packages (Python, pip, venv, Nginx)..."
+echo "Installing system packages (Python, pip, venv, Git, Nginx)..."
 sudo apt update
-sudo apt install -y python3-pip python3-venv nginx
+sudo apt install -y python3-pip python3-venv git nginx
 
 # 2. Setup python virtual environment
 echo "Setting up Python virtual environment..."
@@ -29,7 +29,25 @@ python3 -m venv venv
 ./venv/bin/pip install -r requirements.txt
 ./venv/bin/pip install gunicorn
 
-# 3. Create systemd service
+# 3. Configure Git repository (git init fallback)
+echo "Checking Git repository status..."
+if [ ! -d ".git" ]; then
+    echo "No Git repository found. Initializing Git repo..."
+    git init
+    # Configure generic local credentials for Pi installer if global configs do not exist
+    if ! git config --global user.email >/dev/null 2>&1; then
+        git config user.email "installer@raspberrypi.local"
+        git config user.name "Raspberry Pi Installer"
+    fi
+    git checkout -b main || git checkout -b master
+    git add .
+    git commit -m "Initial commit from Raspberry Pi Auto-Installer"
+    echo "Local Git repository successfully initialized."
+else
+    echo "Git repository already initialized."
+fi
+
+# 4. Create systemd service
 echo "Configuring systemd service..."
 sudo tee /etc/systemd/system/youtube_analytics.service << EOF
 [Unit]
@@ -46,7 +64,7 @@ ExecStart=$INSTALL_DIR/venv/bin/gunicorn --workers 3 --timeout 120 --bind 127.0.
 WantedBy=multi-user.target
 EOF
 
-# 4. Configure Nginx
+# 5. Configure Nginx
 echo "Configuring Nginx reverse proxy on port 6767..."
 sudo tee /etc/nginx/sites-available/youtube_analytics << 'EOF'
 server {
@@ -82,7 +100,7 @@ if [ -f /etc/nginx/sites-enabled/default ]; then
     sudo rm -f /etc/nginx/sites-enabled/default
 fi
 
-# 5. Reload and restart services
+# 6. Reload and restart services
 echo "Starting systemd and Nginx services..."
 sudo systemctl daemon-reload
 sudo systemctl enable youtube_analytics.service

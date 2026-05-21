@@ -24,14 +24,18 @@ A premium, local-first web application designed to run on a **Raspberry Pi 4 (8G
 
 To install all dependencies, configure the background service, set up Nginx to serve the app on port **6767**, and automatically clean up the installer:
 
-1. Clone or copy this project folder to your Raspberry Pi user directory (e.g. `/home/pi/youtube_analytics_app`).
-2. Open your terminal, navigate to the folder, make the installer executable, and run it:
+1. **Clone the Repository** to your Raspberry Pi user directory (e.g. `/home/pi/youtube_analytics_app`):
+   ```bash
+   git clone https://github.com/jeevan72/ytanalyser.git /home/pi/youtube_analytics_app
+   ```
+   *(If you did not clone it and instead copied files manually, run `git init` inside the folder before installing).*
 
-```bash
-cd /home/pi/youtube_analytics_app
-chmod +x install.sh
-./install.sh
-```
+2. **Run the Installer:** Navigate to the folder, make the installer executable, and run it:
+   ```bash
+   cd /home/pi/youtube_analytics_app
+   chmod +x install.sh
+   ./install.sh
+   ```
 
 *Note: The script requires sudo privileges to install system packages and configure systemd/Nginx. Once successful, `install.sh` will automatically delete itself.*
 
@@ -41,9 +45,21 @@ chmod +x install.sh
 
 If you prefer to configure the steps manually:
 
-#### 1. Setup Virtual Environment & Dependencies
+#### 1. Setup Git & Clone
 ```bash
+# Install git if missing
+sudo apt update && sudo apt install git -y
+
+# Clone repo
+git clone https://github.com/jeevan72/ytanalyser.git /home/pi/youtube_analytics_app
 cd /home/pi/youtube_analytics_app
+
+# (Optional fallback if copied files manually)
+# git init
+```
+
+#### 2. Setup Virtual Environment & Dependencies
+```bash
 python3 -m venv venv
 source venv/bin/activate
 pip install --upgrade pip
@@ -51,7 +67,7 @@ pip install -r requirements.txt
 pip install gunicorn
 ```
 
-#### 2. Configure systemd Service
+#### 3. Configure systemd Service
 Create a service file:
 ```bash
 sudo nano /etc/systemd/system/youtube_analytics.service
@@ -79,7 +95,7 @@ sudo systemctl enable youtube_analytics.service
 sudo systemctl start youtube_analytics.service
 ```
 
-#### 3. Configure Nginx Reverse Proxy (Port 6767)
+#### 4. Configure Nginx Reverse Proxy (Port 6767)
 Install Nginx:
 ```bash
 sudo apt update && sudo apt install nginx -y
